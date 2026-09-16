@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LockGPT",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hide your existing ChatGPT conversations while someone borrows your browser.",
   "permissions": [
     "storage",
@@ -33,7 +33,7 @@
   "content_scripts": [
     {
       "js": [
-        "assets/bootstrap.ts-C4-C60h5.js"
+        "assets/bootstrap.ts-loader-BIqMe47F.js"
       ],
       "matches": [
         "https://chatgpt.com/*"
@@ -50,7 +50,8 @@
         "https://chatgpt.com/*"
       ],
       "resources": [
-        "assets/bootstrap.ts-C4-C60h5.js"
+        "assets/icons-Ce181MA_.js",
+        "assets/bootstrap.ts-DXEYs9jU.js"
       ],
       "use_dynamic_url": false
     }

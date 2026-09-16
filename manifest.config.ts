@@ -3,7 +3,7 @@ import type { ManifestV3Export } from '@crxjs/vite-plugin';
 export default {
   manifest_version: 3,
   name: 'LockGPT',
-  version: '0.1.0',
+  version: '0.1.1',
   description: 'Hide your existing ChatGPT conversations while someone borrows your browser.',
   permissions: ['storage', 'scripting', 'webNavigation'],
   host_permissions: ['https://chatgpt.com/*'],
