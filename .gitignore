@@ -1,5 +1,7 @@
 node_modules/
 dist/
+dist-firefox/
+lockgpt-firefox.xpi
 coverage/
 
 # Local tooling and operating-system files

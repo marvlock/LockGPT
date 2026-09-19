@@ -1,11 +1,13 @@
 {
   "name": "lockgpt-extension",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:firefox": "npm run build && node scripts/build-firefox.mjs",
+    "package:firefox": "npm run build:firefox && cd dist-firefox && zip -qr ../lockgpt-firefox.xpi .",
     "test": "vitest run"
   },
   "dependencies": {

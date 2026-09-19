@@ -26,6 +26,16 @@ then open `chrome://extensions`:
 3. choose the `dist` folder
 4. pin lockgpt if you want it next to the address bar
 
+## firefox
+
+build the firefox package with:
+
+```sh
+npm run package:firefox
+```
+
+this creates `lockgpt-firefox.xpi`. for local testing, open `about:debugging#/runtime/this-firefox`, choose **load temporary add-on**, and select `dist/manifest.json`.
+
 ## use it
 
 open chatgpt or claude, click the lockgpt icon, create a six-digit pin, then choose **lock & start guest session**.
