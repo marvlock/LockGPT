@@ -1,55 +1,65 @@
 # lockgpt
 
-a small browser extension for lending your browser without putting your old ai chats on display.
+lockgpt keeps old ai chats out of sight when someone borrows your browser.
 
-it works with chatgpt and claude. turn on guest mode, hand over the browser, and unlock with your pin when you are back.
+it runs on chatgpt and claude. set a pin, start a guest session, then hand over the keyboard. when you return, unlock and choose what happens to the chats made during that session.
 
-## what it does
+## what is in here
 
-- hides existing chatgpt and claude conversations
-- gives the guest a clean chat and a small list of chats they create
-- lets the guest make more chats, switch between them, or delete them
-- lets you keep or delete the session’s chats after you unlock
-- keeps the lock on after a browser restart
+- one pin for guest mode
+- chatgpt and claude support
+- a clean chat for the guest
+- a session-only guest chat list
+- guest chat deletion and owner review after unlock
+- a lock that survives browser restarts
 
-## run it locally
+## build it
+
+you need a recent node.js release and npm.
 
 ```sh
 npm install
 npm run build
 ```
 
-then open `chrome://extensions`:
+the chrome build is placed in `dist`.
 
-1. turn on developer mode
-2. click **load unpacked**
-3. choose the `dist` folder
-4. pin lockgpt if you want it next to the address bar
+## install in chrome or edge
 
-## firefox
+1. open `chrome://extensions` or `edge://extensions`
+2. turn on **developer mode**
+3. click **load unpacked**
+4. select the project’s `dist` folder
+5. pin lockgpt from the extensions menu
 
-build the firefox package with:
+## install in firefox
+
+create the Firefox package:
 
 ```sh
 npm run package:firefox
 ```
 
-this creates `lockgpt-firefox.xpi`. for local testing, open `about:debugging#/runtime/this-firefox`, choose **load temporary add-on**, and select `dist/manifest.json`.
+this creates `lockgpt-firefox.xpi` and the unpacked Firefox build in `dist-firefox`.
+
+for local testing, open `about:debugging#/runtime/this-firefox`, choose **load temporary add-on**, then select `dist-firefox/manifest.json`.
+
+regular Firefox only installs signed add-ons permanently. use the temporary install for development, or install a signed package once LockGPT is published through Firefox Add-ons.
 
 ## use it
 
-open chatgpt or claude, click the lockgpt icon, create a six-digit pin, then choose **lock & start guest session**.
+1. open chatgpt or claude
+2. click the LockGPT toolbar icon and create a six-digit pin
+3. choose **lock & start guest session**
+4. let the guest use the clean chat, create more chats, or switch between the chats made in that session
+5. open LockGPT again, enter the pin, and keep or delete the guest chats
 
-the guest can use the fresh chat, start more chats, and move between chats made in that session. open lockgpt again and enter the pin to return to your normal view.
+## privacy boundary
 
-after unlocking, choose whether to keep or delete the guest chats.
+lockgpt is for everyday privacy, not account isolation. the guest still uses the signed-in chatgpt or claude account, along with any account-level capabilities already available there. it does not encrypt provider data or create a second account.
 
-## a note on privacy
+use a separate browser profile or account when you need a stronger boundary.
 
-lockgpt is for everyday privacy when someone borrows your browser. it does not create a separate account, encrypt provider data, or remove account-level features such as memory and connected apps. the guest is still using the signed-in account.
+## troubleshooting
 
-for a stronger boundary, use a separate browser profile or account.
-
-## if it gets stuck
-
-reload lockgpt in `chrome://extensions`, then refresh the chatgpt or claude tab. both sites change their interface often, so the extension may occasionally need an update.
+after updating the extension, reload it from the browser’s extensions page and refresh the chat tab. chatgpt and claude change their interfaces regularly, so a provider-side change may need a LockGPT update.
