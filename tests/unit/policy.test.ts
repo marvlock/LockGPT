@@ -11,4 +11,10 @@ describe('guest navigation policy', () => {
   it('allows settings again after unlocking', () => {
     expect(allowedWhileLocked('https://chatgpt.com/#settings', { phase: 'UNLOCKED', revision: 3 }, new Set())).toBe(true);
   });
+  it('uses Claude chat routes without accepting unknown chats', () => {
+    expect(conversationIdFromUrl('https://claude.ai/chat/claude-guest')).toBe('claude-guest');
+    expect(allowedWhileLocked('https://claude.ai/new', locked, new Set())).toBe(true);
+    expect(allowedWhileLocked('https://claude.ai/chat/claude-guest', locked, new Set(['claude-guest']))).toBe(true);
+    expect(allowedWhileLocked('https://claude.ai/chat/owner-chat', locked, new Set(['claude-guest']))).toBe(false);
+  });
 });

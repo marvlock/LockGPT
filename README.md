@@ -1,44 +1,45 @@
-# LockGPT
+# lockgpt
 
-LockGPT lets you hand someone your browser without handing over your ChatGPT history. When guest mode is on, your existing chats are covered and the guest can only use chats they create during that session.
+a small browser extension for lending your browser without putting your old ai chats on display.
 
-## Install it in Chrome
+it works with chatgpt and claude. turn on guest mode, hand over the browser, and unlock with your pin when you are back.
 
-1. Download or clone this project.
-2. Open a terminal in `lockgpt-extension` and run:
+## what it does
 
-   ```sh
-   npm install
-   npm run build
-   ```
+- hides existing chatgpt and claude conversations
+- gives the guest a clean chat and a small list of chats they create
+- lets the guest make more chats, switch between them, or delete them
+- lets you keep or delete the session’s chats after you unlock
+- keeps the lock on after a browser restart
 
-3. Open `chrome://extensions` in Chrome.
-4. Turn on **Developer mode**.
-5. Click **Load unpacked** and select the `dist` folder inside this project.
-6. Pin LockGPT from Chrome’s extensions menu if you want it beside the address bar.
+## run it locally
 
-## Use it
+```sh
+npm install
+npm run build
+```
 
-The first time you open LockGPT, create a PIN with at least six digits.
+then open `chrome://extensions`:
 
-When you want to lend your browser:
+1. turn on developer mode
+2. click **load unpacked**
+3. choose the `dist` folder
+4. pin lockgpt if you want it next to the address bar
 
-1. Open ChatGPT.
-2. Click the LockGPT icon.
-3. Click **Lock & start guest session**.
+## use it
 
-Your current ChatGPT tabs are protected. The active tab opens a fresh chat for the guest. Guests can start more chats, move between the chats they created, and delete their own guest chats from the small LockGPT panel.
+open chatgpt or claude, click the lockgpt icon, create a six-digit pin, then choose **lock & start guest session**.
 
-To get back to your normal ChatGPT account, open LockGPT and enter your PIN.
+the guest can use the fresh chat, start more chats, and move between chats made in that session. open lockgpt again and enter the pin to return to your normal view.
 
-After unlocking, you can review the guest chats once. Choose **Keep selected** to leave them in the account, or **Delete selected** to remove them through ChatGPT.
+after unlocking, choose whether to keep or delete the guest chats.
 
-## A quick note about privacy
+## a note on privacy
 
-LockGPT is for casual privacy when someone borrows your browser. It hides and blocks normal access to your existing ChatGPT conversations; it does not create a separate ChatGPT account or encrypt ChatGPT’s data. A guest still uses the account that is signed in, including any account-level features that account has available.
+lockgpt is for everyday privacy when someone borrows your browser. it does not create a separate account, encrypt provider data, or remove account-level features such as memory and connected apps. the guest is still using the signed-in account.
 
-Use a separate browser profile or a separate account when you need stronger separation.
+for a stronger boundary, use a separate browser profile or account.
 
-## If something looks wrong
+## if it gets stuck
 
-Reload the extension from `chrome://extensions`, then refresh the ChatGPT tab. ChatGPT changes its interface from time to time, so an update may occasionally need an adjustment to LockGPT as well.
+reload lockgpt in `chrome://extensions`, then refresh the chatgpt or claude tab. both sites change their interface often, so the extension may occasionally need an update.

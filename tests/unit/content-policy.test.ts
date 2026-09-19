@@ -21,7 +21,7 @@ const submit = () => {
   composer.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 };
 const recordChat = () => {
-  chats.push({ id: 'guest', title: 'Plan a weekend trip', sessionId: 'session', tabId: 1, createdAt: 0, evidence: 'submission-route', confidence: 'verified', cleanupStatus: 'unreviewed' });
+  chats.push({ id: 'guest', title: 'Plan a weekend trip', provider: 'chatgpt', sessionId: 'session', tabId: 1, createdAt: 0, evidence: 'submission-route', confidence: 'verified', cleanupStatus: 'unreviewed' });
   registration({ ok: true, state: locked });
 };
 

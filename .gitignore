@@ -1,1 +1,12 @@
 node_modules/
+dist/
+coverage/
+
+# Local tooling and operating-system files
+.DS_Store
+.env
+.env.*
+!.env.example
+*.log
+.idea/
+.vscode/

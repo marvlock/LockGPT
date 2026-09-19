@@ -12,5 +12,6 @@ export default defineConfig({
   },
   test: {
     include: ['tests/unit/**/*.test.ts'],
+    environmentOptions: { jsdom: { url: 'https://chatgpt.com/' } },
   },
 });

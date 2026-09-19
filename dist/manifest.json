@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
   "name": "LockGPT",
-  "version": "0.1.1",
-  "description": "Hide your existing ChatGPT conversations while someone borrows your browser.",
+  "version": "0.2.0",
+  "description": "Hide your existing AI conversations while someone borrows your browser.",
   "permissions": [
     "storage",
     "scripting",
     "webNavigation"
   ],
   "host_permissions": [
-    "https://chatgpt.com/*"
+    "https://chatgpt.com/*",
+    "https://claude.ai/*"
   ],
   "background": {
     "service_worker": "service-worker-loader.js",
@@ -33,10 +34,11 @@
   "content_scripts": [
     {
       "js": [
-        "assets/bootstrap.ts-loader-BIqMe47F.js"
+        "assets/bootstrap.ts-loader-BXpYxxpn.js"
       ],
       "matches": [
-        "https://chatgpt.com/*"
+        "https://chatgpt.com/*",
+        "https://claude.ai/*"
       ],
       "css": [
         "src/content/guard.css"
@@ -47,11 +49,12 @@
   "web_accessible_resources": [
     {
       "matches": [
-        "https://chatgpt.com/*"
+        "https://chatgpt.com/*",
+        "https://claude.ai/*"
       ],
       "resources": [
-        "assets/icons-Ce181MA_.js",
-        "assets/bootstrap.ts-DXEYs9jU.js"
+        "assets/policy-BpedfX2M.js",
+        "assets/bootstrap.ts-MwTk1Dxd.js"
       ],
       "use_dynamic_url": false
     }

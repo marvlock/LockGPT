@@ -1,8 +1,9 @@
 import type { Response } from '../shared/messages';
 import type { GuestConversation, LockState } from '../shared/types';
-import { allowedWhileLocked, conversationIdFromUrl, isSettingsUrl } from '../shared/policy';
+import { allowedWhileLocked, conversationIdFromUrl, isNewChatUrl, isSettingsUrl, newConversationUrl, providerForUrl, providerLabel } from '../shared/policy';
 import { guestTitleFromPrompt } from '../shared/title';
 import { iconMarkup } from '../shared/icons';
+import { deleteChat } from './delete-chat';
 import { hasSettingsDialog, hideSettingsControls, restoreSettingsControls, settingsControlFromTarget } from './settings-guard';
 
 const root = document.createElement('div');
@@ -19,6 +20,8 @@ let layoutTimer: number | undefined;
 let sidebarOpen = false;
 let coverTimer: number | undefined;
 let coverKey: string | undefined;
+let cleanupRunning = false;
+let deletingGuestChat = false;
 
 const ask = <T extends object>(message: T) => chrome.runtime.sendMessage(message) as Promise<Response>;
 function routeKey(url: string) {
@@ -30,7 +33,8 @@ function clearCoverNotice() {
   coverTimer = undefined;
   coverKey = undefined;
 }
-function cover(message = 'This ChatGPT conversation is hidden', heading = 'This conversation is private') {
+function activeProviderName() { return providerLabel(providerForUrl(location.href) ?? 'chatgpt'); }
+function cover(message = `This ${activeProviderName()} conversation is hidden`, heading = 'This conversation is private') {
   document.documentElement.classList.remove('lockgpt-guest');
   document.documentElement.classList.add('lockgpt-pending');
   const route = routeKey(location.href);
@@ -70,14 +74,17 @@ function guardSettingsInteraction(event: Event) {
   hideSettingsControls();
 }
 function showGuest(chats: GuestConversation[], url: string) {
+  if (deletingGuestChat && root.querySelector('.lockgpt-panel')) return;
   clearCoverNotice();
   document.documentElement.classList.remove('lockgpt-pending');
   document.documentElement.classList.add('lockgpt-guest');
   chats = chats.filter(chat => chat.cleanupStatus !== 'deleted');
   const currentId = conversationIdFromUrl(url);
+  const provider = providerForUrl(url);
+  if (!provider) return coverUnavailable();
   root.innerHTML = `<button class="lockgpt-sidebar-toggle" type="button" aria-label="Toggle guest sidebar" aria-expanded="${sidebarOpen}" aria-controls="lockgpt-sidebar">${iconMarkup('sidebar')}</button>
     <section id="lockgpt-sidebar" class="lockgpt-panel${sidebarOpen ? ' is-open' : ''}" aria-label="Guest conversations">
-      <div class="lockgpt-panel-header"><span>ChatGPT</span><span class="lockgpt-mode">Guest</span></div>
+      <div class="lockgpt-panel-header"><span>${providerLabel(provider)}</span><span class="lockgpt-mode">Guest</span></div>
       <button class="lockgpt-new" type="button">${iconMarkup('compose')}<span>New chat</span></button>
       <h2 class="lockgpt-panel-title">Your chats</h2>
       <div class="lockgpt-chat-list">${chats.length ? chats.map(chat => `<div class="lockgpt-chat-row${chat.id === currentId ? ' is-active' : ''}"><button class="lockgpt-chat" type="button" data-chat-id="${escapeHtml(chat.id)}" ${chat.id === currentId ? 'aria-current="page"' : ''}><span>${escapeHtml(chat.title)}</span></button><button class="lockgpt-delete" type="button" data-delete-id="${escapeHtml(chat.id)}" aria-label="Delete ${escapeHtml(chat.title)}">${iconMarkup('trash')}</button></div>`).join('') : '<p class="lockgpt-empty">Chats you start here will appear in this session.</p>'}</div>
@@ -88,17 +95,30 @@ function showGuest(chats: GuestConversation[], url: string) {
     (event.currentTarget as HTMLButtonElement).setAttribute('aria-expanded', String(sidebarOpen));
     root.querySelector('.lockgpt-panel')?.classList.toggle('is-open', sidebarOpen);
   });
-  root.querySelector<HTMLButtonElement>('.lockgpt-new')?.addEventListener('click', () => { location.href = '/'; });
-  root.querySelectorAll<HTMLButtonElement>('[data-chat-id]').forEach(button => button.addEventListener('click', () => { location.href = `/c/${button.dataset.chatId}`; }));
-  root.querySelectorAll<HTMLButtonElement>('[data-delete-id]').forEach(button => button.addEventListener('click', async () => { const id = button.dataset.deleteId; if (!id || !confirm('Delete this guest chat? This cannot be undone.')) return; button.disabled = true; const result = await ask({ type: 'DELETE_GUEST_CHATS', ids: [id] }); if (!result.ok) { button.disabled = false; alert(result.error); return; } await applyPolicy(); }));
+  root.querySelector<HTMLButtonElement>('.lockgpt-new')?.addEventListener('click', () => { location.href = newConversationUrl(location.href); });
+  root.querySelectorAll<HTMLButtonElement>('[data-chat-id]').forEach(button => button.addEventListener('click', () => { location.href = provider === 'claude' ? `/chat/${button.dataset.chatId}` : `/c/${button.dataset.chatId}`; }));
+  root.querySelectorAll<HTMLButtonElement>('[data-delete-id]').forEach(button => button.addEventListener('click', async () => {
+    const id = button.dataset.deleteId;
+    if (!id || deletingGuestChat || !confirm('Delete this guest chat? This cannot be undone.')) return;
+    deletingGuestChat = true;
+    root.querySelectorAll<HTMLButtonElement>('[data-delete-id]').forEach(control => { control.disabled = true; });
+    button.setAttribute('aria-label', 'Deleting chat…');
+    try {
+      const result = await ask({ type: 'DELETE_GUEST_CHATS', ids: [id] });
+      if (!result.ok) alert(result.error);
+      else if (conversationIdFromUrl(location.href) === id) location.href = newConversationUrl(location.href);
+    } catch { alert('Deletion could not be confirmed. Check the chat on the site.'); }
+    finally { deletingGuestChat = false; void applyPolicy(); }
+  }));
 }
 function escapeHtml(value: string) { const node = document.createElement('span'); node.textContent = value; return node.innerHTML.replaceAll('"', '&quot;').replaceAll("'", '&#39;'); }
 function showUnlocked() { clearCoverNotice(); restoreSettingsControls(); document.documentElement.classList.remove('lockgpt-pending', 'lockgpt-guest'); root.replaceChildren(); }
 function hasRecognizedComposer() { return Boolean(document.querySelector('textarea, [contenteditable="true"]')); }
 async function applyPolicy() {
+  if (cleanupRunning) return;
   const run = ++policyRun;
   const url = location.href;
-  const isCurrent = () => run === policyRun && url === location.href;
+  const isCurrent = () => !cleanupRunning && run === policyRun && url === location.href;
   try {
     const response = await ask({ type: 'GET_STATE' });
     if (!isCurrent()) return;
@@ -134,7 +154,7 @@ async function applyPolicy() {
   }
 }
 function observeSubmission(event: Event) {
-  if (!state || state.phase !== 'LOCKED' || location.pathname !== '/') return;
+  if (!state || state.phase !== 'LOCKED' || !isNewChatUrl(location.href)) return;
   const target = event.target;
   if (!(target instanceof Element) || target.closest('#lockgpt-root')) return;
   const composerSelector = 'textarea, [contenteditable="true"], [contenteditable="plaintext-only"]';
@@ -162,7 +182,9 @@ async function trackAfterNavigation(currentState: LockState, url: string) {
   const submission = pendingSubmission;
   if (!submission || submission.revision !== currentState.revision) return;
   pendingSubmission = undefined;
-  const promise = ask({ type: 'TRACK_GUEST_CHAT', id, title: submission.title, revision: submission.revision }).then(result => {
+  const provider = providerForUrl(url);
+  if (!provider) return;
+  const promise = ask({ type: 'TRACK_GUEST_CHAT', id, title: submission.title, provider, revision: submission.revision }).then(result => {
     if (!result.ok) throw new Error(result.error);
   });
   const registration = { id, revision: currentState.revision, promise };
@@ -193,33 +215,22 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) observeSubmission(event);
 }, true);
 chrome.runtime.onMessage.addListener((message: { type: string; state?: LockState; id?: string }, _sender, sendResponse) => {
+  if (message.type === 'CLEANUP_READY') { sendResponse({ ok: true }); return; }
   if (message.type === 'STATE_CHANGED' && message.state) { state = message.state; applyPolicy(); }
   if (message.type === 'CHECK_ROUTE') { clearTimeout(routeTimer); if (enforceSettingsBoundary()) { ++policyRun; return; } routeTimer = window.setTimeout(() => { void applyPolicy(); }, 80); }
-  if (message.type === 'DELETE_CURRENT_GUEST_CHAT' && message.id) { void deleteCurrentGuestChat(message.id).then(sendResponse); return true; }
+  if (message.type === 'DELETE_CURRENT_GUEST_CHAT' && message.id && !cleanupRunning) { void deleteCurrentGuestChat(message.id).then(sendResponse).catch(() => sendResponse({ ok: false, uncertain: true, error: 'Cleanup stopped unexpectedly. Check the chat before retrying.' })); return true; }
 });
-const delay = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds));
-async function waitFor<T>(find: () => T | undefined, timeout = 12_000): Promise<T | undefined> { const end = Date.now() + timeout; while (Date.now() < end) { const found = find(); if (found) return found; await delay(100); } return undefined; }
-async function deleteCurrentGuestChat(id: string): Promise<{ ok: boolean; error?: string }> {
-  // Delete through the conversation's sidebar row so the action is bound to
-  // the exact recorded ID, never to an arbitrary visible conversation.
-  // This runs only in a background cleanup tab. The native sidebar must be
-  // present to target the exact conversation row rather than another chat.
-  document.documentElement.classList.remove('lockgpt-guest');
-  const link = await waitFor(() => [...document.querySelectorAll<HTMLAnchorElement>('a[href*="/c/"]')].find(anchor => /\/c\/([^/?#]+)/.exec(anchor.getAttribute('href') ?? '')?.[1] === id));
-  const row = link?.closest('li, [data-sidebar-item="true"]') ?? link?.parentElement;
-  const menu = row ? [...row.querySelectorAll<HTMLButtonElement>('button')].find(button => button.matches('[data-testid$="-options"]') || /conversation options|more options/i.test(button.getAttribute('aria-label') ?? '')) : undefined;
-  if (!menu) return { ok: false, error: 'The selected ChatGPT conversation menu was not recognized.' };
-  menu.click();
-  const deleteItem = await waitFor(() => document.querySelector<HTMLElement>('[data-testid="delete-chat-menu-item"]') ?? [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(item => /^delete$/i.test((item.textContent ?? '').trim())));
-  if (!deleteItem) return { ok: false, error: 'ChatGPT delete action was not recognized.' };
-  deleteItem.click();
-  const confirm = await waitFor(() => document.querySelector<HTMLButtonElement>('[data-testid="delete-conversation-confirm-button"]') ?? [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(button => /^delete$/i.test((button.textContent ?? '').trim())));
-  if (!confirm) return { ok: false, error: 'ChatGPT deletion confirmation was not recognized.' };
-  confirm.click();
-  await delay(500);
-  return { ok: !confirm.isConnected, error: confirm.isConnected ? 'ChatGPT did not confirm deletion.' : undefined };
+// Cleanup owns this document until the background closes its dedicated tab.
+async function deleteCurrentGuestChat(id: string) {
+  cleanupRunning = true;
+  ++policyRun;
+  clearTimeout(layoutTimer);
+  clearTimeout(routeTimer);
+  cover('Removing the selected guest chat. Please wait.', 'Deleting guest chat');
+  return deleteChat(id);
 }
 new MutationObserver(records => {
+  if (cleanupRunning) return;
   // ChatGPT mounts its composer asynchronously. Keep the page covered until a
   // recognized composer exists, then reveal only the allowed guest route. Do
   // not react to LockGPT's own panel render: rebuilding it can swallow clicks.
